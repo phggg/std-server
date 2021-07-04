@@ -5,6 +5,10 @@ import * as p from 'path'
 
 const server = http.createServer()
 const publicDir = p.resolve(__dirname, 'public')
+const cacheAge = 5 // 5s
+
+console.log(process.argv)
+
 server.on('request', (request: IncomingMessage, response: ServerResponse) => {
   const { method, url: path, headers } = request
   /**
@@ -13,33 +17,27 @@ server.on('request', (request: IncomingMessage, response: ServerResponse) => {
    * url.format(), url.resolve()也弃用了
    */
   const { pathname, search, searchParams } = new URL(path,'http://localhost:8888/')
-  console.log(search, searchParams.get('q'))
-  switch (pathname) {
-    case '/index.html':
-      response.setHeader('Content-Type', 'text/html; charset=utf-8')
-      fs.readFile(p.resolve(publicDir, 'index.html'), (error, data) => {
-        if (error) throw error
-        response.end(data.toString())
-      })
-      break
-    case '/style.css':
-      response.setHeader('Content-Type', 'text/css; charset=utf-8')
-      fs.readFile(p.resolve(publicDir, 'style.css'), (error, data) => {
-        if (error) throw error
-        response.end(data.toString())
-      })
-      break
-    case '/main.js':
-      response.setHeader('Content-Type', 'text/javascript; charset=utf-8')
-      fs.readFile(p.resolve(publicDir, 'main.js'), (error, data) => {
-        if (error) throw error
-        response.end(data.toString())
-      })
-      break
-    default:
-      response.statusCode = 404
-      response.end()
-  }
+  // console.log(search, searchParams.get('q'))
+  let filename = pathname.slice(1)
+  if(filename === '') filename = 'index.html'
+  fs.readFile(p.resolve(publicDir, filename), (error, data) => {
+    if (error) {
+      if(error.errno === -2) {
+        response.statusCode = 404
+        fs.readFile(p.resolve(publicDir, '404.html'), (err, data) => {
+          response.end(data)
+        })
+      } else {
+        response.statusCode = 500
+        response.setHeader('Content-Type', 'text/html; charset=utf-8')
+        response.end('服务器繁忙')
+      }
+    } else {
+      // 添加缓存
+      response.setHeader('Cache-Control', `public, max-age=${cacheAge}`)
+      response.end(data)
+    }
+  })
 })
 
 server.listen(8888)

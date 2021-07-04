@@ -1,9 +1,12 @@
 {
-  "name": "node-server",
+  "name": "std-server",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^16.0.0"
+  },
+  "scripts": {
+    "start": "tsnd index.ts -c 5"
   }
 }
